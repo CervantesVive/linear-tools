@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from typing_extensions import Annotated
+from typing import Annotated
 
 import typer
 

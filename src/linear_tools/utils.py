@@ -41,17 +41,27 @@ LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql'
 MAX_RETRY_ATTEMPTS = 5
 RATE_LIMIT_BASE_BACKOFF = 1  # seconds; exponential: 1s, 2s, 4s, 8s, 16s
 
-if not LINEAR_API_KEY:
-    raise EnvironmentError(
-        "Missing required environment variable: LINEAR_API_KEY\n\n"
-        "Please ensure the following is set:\n"
-        "  - LINEAR_API_KEY: Your Linear personal API key\n\n"
-        "To create one: Linear Settings > Security & Access > Personal API Keys\n"
-        "You can set this in a .env file in the project root or export it as an environment variable."
-    )
-
 # Module-level verbose flag — set linear_utils.VERBOSE = True in calling scripts
 VERBOSE = False
+
+
+def _require_env():
+    """Validate required environment variables are set.
+
+    Called lazily at the start of any function that makes API calls,
+    so that --help and other non-API operations work without credentials.
+
+    Raises:
+        EnvironmentError: If LINEAR_API_KEY is missing.
+    """
+    if not LINEAR_API_KEY:
+        raise EnvironmentError(
+            "Missing required environment variable: LINEAR_API_KEY\n\n"
+            "Please ensure the following is set:\n"
+            "  - LINEAR_API_KEY: Your Linear personal API key\n\n"
+            "To create one: Linear Settings > Security & Access > Personal API Keys\n"
+            "You can set this in a .env file in the project root or export it as an environment variable."
+        )
 
 
 def graphql_request(query, variables=None):
@@ -69,6 +79,7 @@ def graphql_request(query, variables=None):
     Raises:
         Exception: On HTTP errors, rate limit exhaustion, or GraphQL-level errors
     """
+    _require_env()
     headers = {
         'Content-Type': 'application/json',
         'Authorization': LINEAR_API_KEY,

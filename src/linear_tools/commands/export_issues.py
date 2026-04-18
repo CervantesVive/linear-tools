@@ -3,7 +3,7 @@ import sys
 import csv
 import json
 from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated
 
 import typer
 
