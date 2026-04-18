@@ -205,9 +205,6 @@ def output_csv(issues, fields):
     writer.writerows(data)
 
 
-app = typer.Typer(help="Export Linear issues using a JQL-like query language.")
-
-@app.command()
 def export_issues(
     query: Annotated[str, typer.Option("--query", "-q", help="JQL-like filter query string (required)")],
     csv_output: Annotated[bool, typer.Option("--csv", help="Output CSV instead of JSON")] = False,

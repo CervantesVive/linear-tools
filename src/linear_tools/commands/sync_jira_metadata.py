@@ -493,9 +493,6 @@ def print_table(results, dry_run=False):
     print(f"\nSummary{label}: {updated} updated, {skipped} no-op, {failed} failed")
 
 
-app = typer.Typer(help="Sync JIRA CSV metadata to Linear issues.")
-
-@app.command()
 def sync_jira_metadata(
     csv_file: Annotated[str, typer.Argument(help="Path to the JIRA CSV export")],
     jira_mapping: Annotated[str, typer.Option("--jira-mapping", help="JSON mapping file from jira to-linear --json (use - for stdin)", show_default=False)],

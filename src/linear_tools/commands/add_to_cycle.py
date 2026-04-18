@@ -139,9 +139,6 @@ def print_json(cycle, results):
     print(json.dumps({'cycle': cycle_out, 'results': results}, indent=2))
 
 
-app = typer.Typer(help="Add Linear issues to the team's active cycle.")
-
-@app.command()
 def add_to_cycle(
     identifiers: Annotated[Optional[List[str]], typer.Argument(help="Linear issue identifiers (e.g. WEB-458)")] = None,
     file: Annotated[Optional[str], typer.Option("-f", "--file", help="File containing issue identifiers")] = None,
