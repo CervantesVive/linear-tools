@@ -33,6 +33,8 @@ def extract_slug_id(project_input):
         if len(parts) < 2:
             raise ValueError(f"Could not parse project slug from URL: {project_input!r}")
         value = parts[1].split('/')[0].split('?')[0]
+        if not value:
+            raise ValueError(f"Could not parse project slug from URL: {project_input!r}")
     return value.split('-')[-1]
 
 

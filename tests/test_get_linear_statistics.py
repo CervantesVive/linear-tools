@@ -206,3 +206,11 @@ class TestExtractSlugId:
     def test_whitespace_only_raises(self):
         with pytest.raises(ValueError, match="cannot be empty"):
             extract_slug_id('   ')
+
+    def test_url_with_no_slug_raises(self):
+        with pytest.raises(ValueError):
+            extract_slug_id('https://linear.app/bitgo/project/')
+
+    def test_url_with_only_query_params_raises(self):
+        with pytest.raises(ValueError):
+            extract_slug_id('https://linear.app/bitgo/project/?param=value')
