@@ -1,6 +1,6 @@
 """Calculate estimate statistics for Linear issues matching a query."""
 import json
-from typing import Annotated
+from typing import Annotated, Optional
 import typer
 
 from linear_tools import utils as linear_utils
@@ -63,21 +63,19 @@ def calculate_estimates_for_issues(issues):
     return total_points, defaulted_count, explicit_count
 
 
-def get_query_statistics(query):
-    """Get statistics for Linear issues matching a query string.
+def get_filter_statistics(graphql_filter):
+    """Get statistics for Linear issues matching a pre-built GraphQL filter dict.
 
     Args:
-        query: Linear JQL-like query string (same syntax as export-issues)
+        graphql_filter: Linear IssueFilter dict (from parse_query or built manually).
 
     Returns:
         dict with keys: total_points, resolved_points, unresolved_points,
         resolved_points_percentage, total_issues, resolved_issues,
         unresolved_issues, resolved_issues_percentage
     """
-    graphql_filter = parse_query(query)
     raw_nodes = fetch_issues(graphql_filter)
 
-    # Each raw node has state.type — flatten just what we need
     issues = [
         {
             'stateType': (node.get('state') or {}).get('type'),
@@ -112,26 +110,55 @@ def get_query_statistics(query):
     }
 
 
+def get_query_statistics(query):
+    """Get statistics for Linear issues matching a query string.
+
+    Args:
+        query: Linear JQL-like query string (same syntax as export-issues)
+
+    Returns:
+        dict — same shape as get_filter_statistics
+    """
+    return get_filter_statistics(parse_query(query))
+
+
 def get_statistics(
-    query: Annotated[str, typer.Argument(help="Linear query string")],
+    query: Annotated[Optional[str], typer.Argument(help="Linear query string")] = None,
+    project: Annotated[Optional[str], typer.Option("--project", "-p", help="Project URL, full slug, or short ID")] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output")] = False,
 ):
     if verbose:
         linear_utils.VERBOSE = True
 
-    if not query.strip():
-        typer.echo("Error: query cannot be empty", err=True)
+    if not project and not (query and query.strip()):
+        typer.echo("Error: provide --project, a query, or both", err=True)
         raise typer.Exit(1)
 
-    if verbose:
-        typer.echo(f"Processing query...", err=True)
-        typer.echo(f"  Query: {query}", err=True)
+    filters = []
+
+    if project:
+        try:
+            slug_id = extract_slug_id(project)
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
+        filters.append({'project': {'slugId': {'eq': slug_id}}})
+        if verbose:
+            typer.echo(f"  Project slug ID: {slug_id}", err=True)
+
+    if query and query.strip():
+        try:
+            filters.append(parse_query(query))
+        except (SyntaxError, ValueError) as e:
+            typer.echo(f"Query error: {e}", err=True)
+            raise typer.Exit(1)
+        if verbose:
+            typer.echo(f"  Query: {query}", err=True)
+
+    graphql_filter = filters[0] if len(filters) == 1 else {'and': filters}
 
     try:
-        stats = get_query_statistics(query)
-    except (SyntaxError, ValueError) as e:
-        typer.echo(f"Query error: {e}", err=True)
-        raise typer.Exit(1)
+        stats = get_filter_statistics(graphql_filter)
     except Exception as e:
         typer.echo(f"API error: {e}", err=True)
         raise typer.Exit(1)
@@ -151,5 +178,10 @@ def get_statistics(
             )
         typer.echo("", err=True)
 
-    output = {'query': query, **stats}
+    output = {}
+    if project:
+        output['project'] = project
+    if query:
+        output['query'] = query
+    output.update(stats)
     typer.echo(json.dumps(output, indent=2))

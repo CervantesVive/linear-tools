@@ -9,6 +9,7 @@ from linear_tools.commands.get_statistics import (
     COMPLETED_STATE_TYPES,
     calculate_estimates_for_issues,
     extract_slug_id,
+    get_filter_statistics,
 )
 
 
@@ -214,3 +215,90 @@ class TestExtractSlugId:
     def test_url_with_only_query_params_raises(self):
         with pytest.raises(ValueError):
             extract_slug_id('https://linear.app/bitgo/project/?param=value')
+
+
+class TestGetFilterStatistics:
+    """Tests for get_filter_statistics — mocks fetch_issues directly."""
+
+    def _node(self, state_type, estimate):
+        return {'state': {'type': state_type}, 'estimate': estimate}
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    def test_passes_filter_to_fetch(self, mock_fetch):
+        mock_fetch.return_value = []
+        gql_filter = {'project': {'slugId': {'eq': '2d728a27e93e'}}}
+        get_filter_statistics(gql_filter)
+        mock_fetch.assert_called_once_with(gql_filter)
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    def test_combined_and_filter(self, mock_fetch):
+        mock_fetch.return_value = [self._node('completed', 5)]
+        combined = {'and': [
+            {'project': {'slugId': {'eq': '2d728a27e93e'}}},
+            {'team': {'key': {'eq': 'WEB'}}},
+        ]}
+        stats = get_filter_statistics(combined)
+        mock_fetch.assert_called_once_with(combined)
+        assert stats['total_issues'] == 1
+        assert stats['resolved_points'] == 5
+        assert stats['resolved_issues'] == 1
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    def test_empty_result(self, mock_fetch):
+        mock_fetch.return_value = []
+        stats = get_filter_statistics({'project': {'slugId': {'eq': 'abc'}}})
+        assert stats['total_issues'] == 0
+        assert stats['total_points'] == 0
+
+
+class TestGetStatisticsCli:
+    """Tests for the get_statistics CLI — uses typer.testing.CliRunner."""
+
+    def setup_method(self):
+        from typer.testing import CliRunner
+        from linear_tools.cli import app
+        self.runner = CliRunner()
+        self.app = app
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_query_only(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {'team': {'key': {'eq': 'WEB'}}}
+        mock_fetch.return_value = []
+        result = self.runner.invoke(self.app, ['get-statistics', 'team = WEB'])
+        assert result.exit_code == 0
+        import json
+        output = json.loads(result.output)
+        assert output['query'] == 'team = WEB'
+        assert 'project' not in output
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    def test_project_only(self, mock_fetch):
+        mock_fetch.return_value = []
+        result = self.runner.invoke(self.app, ['get-statistics', '--project', '2d728a27e93e'])
+        assert result.exit_code == 0
+        import json
+        output = json.loads(result.output)
+        assert output['project'] == '2d728a27e93e'
+        assert 'query' not in output
+        mock_fetch.assert_called_once_with({'project': {'slugId': {'eq': '2d728a27e93e'}}})
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_project_and_query_combined(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {'state': {'name': {'neq': 'Completed'}}}
+        mock_fetch.return_value = []
+        result = self.runner.invoke(
+            self.app,
+            ['get-statistics', '--project', '2d728a27e93e', 'state != Completed'],
+        )
+        assert result.exit_code == 0
+        called_filter = mock_fetch.call_args[0][0]
+        assert called_filter == {'and': [
+            {'project': {'slugId': {'eq': '2d728a27e93e'}}},
+            {'state': {'name': {'neq': 'Completed'}}},
+        ]}
+
+    def test_no_args_exits_with_error(self):
+        result = self.runner.invoke(self.app, ['get-statistics'])
+        assert result.exit_code == 1
