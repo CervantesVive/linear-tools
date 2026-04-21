@@ -162,3 +162,110 @@ class TestParseProjectQuery:
     def test_syntax_error(self):
         with pytest.raises(SyntaxError):
             parse_project_query('team =')
+
+
+from unittest.mock import patch
+from linear_tools.commands.export_projects import normalize_project, fetch_projects, PRIORITY_LABELS
+
+
+class TestNormalizeProject:
+    """Tests for normalize_project — pure function, no I/O."""
+
+    def _node(self, **overrides):
+        base = {
+            'name': 'Auth Revamp',
+            'description': 'Revamp authentication',
+            'url': 'https://linear.app/bitgo/project/auth-revamp',
+            'priority': 2,
+            'startDate': '2026-01-01',
+            'targetDate': '2026-06-30',
+            'createdAt': '2026-01-01T00:00:00Z',
+            'updatedAt': '2026-02-01T00:00:00Z',
+            'status': {'name': 'In Progress', 'type': 'started'},
+            'labels': {'nodes': [{'name': "Q2'26"}, {'name': 'Security'}]},
+            'lead': {'displayName': 'Alice', 'name': 'alice'},
+            'teams': {'nodes': [{'name': 'Web', 'key': 'WEB'}]},
+            'initiatives': {'nodes': [{'name': 'Platform Modernization'}]},
+        }
+        base.update(overrides)
+        return base
+
+    def test_full_node(self):
+        result = normalize_project(self._node())
+        assert result['name'] == 'Auth Revamp'
+        assert result['url'] == 'https://linear.app/bitgo/project/auth-revamp'
+        assert result['state'] == 'In Progress'
+        assert result['stateType'] == 'started'
+        assert result['priority'] == 2
+        assert result['priorityLabel'] == 'High'
+        assert result['labels'] == "Q2'26, Security"
+        assert result['lead'] == 'Alice'
+        assert result['teams'] == 'WEB'
+        assert result['initiative'] == 'Platform Modernization'
+        assert result['startDate'] == '2026-01-01'
+        assert result['targetDate'] == '2026-06-30'
+        assert result['description'] == 'Revamp authentication'
+
+    def test_missing_status(self):
+        result = normalize_project(self._node(status=None))
+        assert result['state'] is None
+        assert result['stateType'] is None
+
+    def test_missing_lead(self):
+        result = normalize_project(self._node(lead=None))
+        assert result['lead'] is None
+
+    def test_missing_labels(self):
+        result = normalize_project(self._node(labels={'nodes': []}))
+        assert result['labels'] == ''
+
+    def test_missing_teams(self):
+        result = normalize_project(self._node(teams={'nodes': []}))
+        assert result['teams'] == ''
+
+    def test_missing_initiatives(self):
+        result = normalize_project(self._node(initiatives={'nodes': []}))
+        assert result['initiative'] == ''
+
+    def test_priority_none(self):
+        result = normalize_project(self._node(priority=None))
+        assert result['priority'] is None
+        assert result['priorityLabel'] is None
+
+    def test_priority_labels_map(self):
+        assert PRIORITY_LABELS == {0: 'No Priority', 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low'}
+
+
+class TestFetchProjects:
+    """Tests for fetch_projects — mocks graphql_request."""
+
+    def _make_page(self, names, has_next=False, cursor=None):
+        return {
+            'projects': {
+                'nodes': [{'name': n} for n in names],
+                'pageInfo': {'hasNextPage': has_next, 'endCursor': cursor},
+            }
+        }
+
+    @patch('linear_tools.commands.export_projects.linear_utils.graphql_request')
+    def test_single_page(self, mock_gql):
+        mock_gql.return_value = self._make_page(['Alpha', 'Beta'])
+        result = fetch_projects({'name': {'containsIgnoreCase': 'a'}})
+        assert [p['name'] for p in result] == ['Alpha', 'Beta']
+        assert mock_gql.call_count == 1
+
+    @patch('linear_tools.commands.export_projects.linear_utils.graphql_request')
+    def test_two_pages(self, mock_gql):
+        mock_gql.side_effect = [
+            self._make_page(['Alpha', 'Beta'], has_next=True, cursor='cur1'),
+            self._make_page(['Gamma'], has_next=False),
+        ]
+        result = fetch_projects({})
+        assert [p['name'] for p in result] == ['Alpha', 'Beta', 'Gamma']
+        assert mock_gql.call_count == 2
+
+    @patch('linear_tools.commands.export_projects.linear_utils.graphql_request')
+    def test_empty_result(self, mock_gql):
+        mock_gql.return_value = self._make_page([])
+        result = fetch_projects({})
+        assert result == []
