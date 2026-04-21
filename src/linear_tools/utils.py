@@ -490,3 +490,40 @@ def get_workspace_labels():
 def issue_url(identifier):
     """Construct a human-readable Linear issue URL."""
     return f"https://linear.app/{LINEAR_ORG_SLUG}/issue/{identifier}"
+
+
+_COMMENT_CREATE_MUTATION = """
+mutation CreateComment($issueId: String!, $body: String!) {
+  commentCreate(input: { issueId: $issueId, body: $body }) {
+    success
+  }
+}
+"""
+
+
+def post_comment_to_linear_issue(identifier, body):
+    """Post a markdown comment to a Linear issue by its identifier.
+
+    Resolves the identifier (e.g. "CSI-1907") to an internal UUID, then
+    posts the comment via the commentCreate GraphQL mutation.
+
+    Args:
+        identifier: Human-readable Linear issue identifier (e.g. "CSI-1907").
+        body: Markdown-formatted comment body.
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    resolved = resolve_issue_ids([identifier])
+    issue_uuid = resolved.get(identifier)
+    if not issue_uuid:
+        return (False, f"Issue {identifier} not found")
+
+    result = graphql_request(
+        _COMMENT_CREATE_MUTATION,
+        variables={'issueId': issue_uuid, 'body': body},
+    )
+    success = result.get('commentCreate', {}).get('success', False)
+    if success:
+        return (True, "Comment posted")
+    return (False, f"Mutation failed for {identifier}")
