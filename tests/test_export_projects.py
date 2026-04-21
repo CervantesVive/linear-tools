@@ -1,10 +1,12 @@
 """Tests for export_projects command — parser, normalization, and fetch."""
 import os
 import pytest
+from unittest.mock import patch
 
 os.environ.setdefault('LINEAR_API_KEY', 'test')
 
 from linear_tools.project_query_parser import build_project_condition, parse_project_query
+from linear_tools.commands.export_projects import normalize_project, fetch_projects, PRIORITY_LABELS
 
 
 class TestBuildProjectCondition:
@@ -164,8 +166,6 @@ class TestParseProjectQuery:
             parse_project_query('team =')
 
 
-from unittest.mock import patch
-from linear_tools.commands.export_projects import normalize_project, fetch_projects, PRIORITY_LABELS
 
 
 class TestNormalizeProject:
@@ -263,6 +263,7 @@ class TestFetchProjects:
         result = fetch_projects({})
         assert [p['name'] for p in result] == ['Alpha', 'Beta', 'Gamma']
         assert mock_gql.call_count == 2
+        assert mock_gql.call_args_list[1].kwargs['variables']['after'] == 'cur1'
 
     @patch('linear_tools.commands.export_projects.linear_utils.graphql_request')
     def test_empty_result(self, mock_gql):
