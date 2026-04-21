@@ -83,3 +83,46 @@ def get_query_statistics(query):
         'unresolved_issues': total_unresolved,
         'resolved_issues_percentage': resolved_issues_pct,
     }
+
+
+def get_statistics(
+    query: Annotated[str, typer.Argument(help="Linear query string")],
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output")] = False,
+):
+    if verbose:
+        linear_utils.VERBOSE = True
+
+    if not query.strip():
+        typer.echo("Error: query cannot be empty", err=True)
+        raise typer.Exit(1)
+
+    if verbose:
+        typer.echo(f"Processing query...", err=True)
+        typer.echo(f"  Query: {query}", err=True)
+
+    try:
+        stats = get_query_statistics(query)
+    except (SyntaxError, ValueError) as e:
+        typer.echo(f"Query error: {e}", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"API error: {e}", err=True)
+        raise typer.Exit(1)
+
+    if verbose:
+        typer.echo(f"  Found {stats['total_issues']} issues, {stats['total_points']} total points", err=True)
+        if stats['total_issues'] > 0:
+            typer.echo(
+                f"    Completed: {stats['resolved_issues']} issues, "
+                f"{stats['resolved_points']} points ({stats['resolved_points_percentage']}%)",
+                err=True,
+            )
+            typer.echo(
+                f"    Unresolved: {stats['unresolved_issues']} issues, "
+                f"{stats['unresolved_points']} points",
+                err=True,
+            )
+        typer.echo("", err=True)
+
+    output = {'query': query, **stats}
+    typer.echo(json.dumps(output, indent=2))
