@@ -69,3 +69,107 @@ class TestCalculateEstimatesForIssues:
         assert total == 0
         assert defaulted == 0
         assert explicit == 0
+
+
+from unittest.mock import patch
+from linear_tools.commands.get_statistics import get_query_statistics
+
+
+class TestGetQueryStatistics:
+    """Tests for get_query_statistics — mocks fetch_issues."""
+
+    def _node(self, state_type, estimate):
+        """Build a minimal raw GraphQL node (as returned by fetch_issues)."""
+        return {
+            'state': {'type': state_type},
+            'estimate': estimate,
+        }
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_all_completed(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {}
+        mock_fetch.return_value = [
+            self._node('completed', 5),
+            self._node('cancelled', 8),
+        ]
+        stats = get_query_statistics('team = WEB')
+        assert stats['total_points'] == 13
+        assert stats['resolved_points'] == 13
+        assert stats['unresolved_points'] == 0
+        assert stats['resolved_points_percentage'] == 100
+        assert stats['total_issues'] == 2
+        assert stats['resolved_issues'] == 2
+        assert stats['unresolved_issues'] == 0
+        assert stats['resolved_issues_percentage'] == 100
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_all_unresolved(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {}
+        mock_fetch.return_value = [
+            self._node('started', 5),
+            self._node('unstarted', 8),
+        ]
+        stats = get_query_statistics('team = WEB')
+        assert stats['total_points'] == 13
+        assert stats['resolved_points'] == 0
+        assert stats['unresolved_points'] == 13
+        assert stats['resolved_points_percentage'] == 0
+        assert stats['total_issues'] == 2
+        assert stats['resolved_issues'] == 0
+        assert stats['unresolved_issues'] == 2
+        assert stats['resolved_issues_percentage'] == 0
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_mixed(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {}
+        mock_fetch.return_value = [
+            self._node('completed', 5),
+            self._node('started', 8),
+            self._node('cancelled', 3),
+            self._node('backlog', 2),
+        ]
+        stats = get_query_statistics('team = WEB')
+        assert stats['total_points'] == 18
+        assert stats['resolved_points'] == 8   # 5 + 3
+        assert stats['unresolved_points'] == 10  # 8 + 2
+        assert stats['resolved_points_percentage'] == 44
+        assert stats['total_issues'] == 4
+        assert stats['resolved_issues'] == 2
+        assert stats['unresolved_issues'] == 2
+        assert stats['resolved_issues_percentage'] == 50
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_defaulted_estimates(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {}
+        mock_fetch.return_value = [
+            self._node('completed', None),
+            self._node('started', None),
+        ]
+        stats = get_query_statistics('team = WEB')
+        assert stats['total_points'] == 6   # 2 * 3
+        assert stats['resolved_points'] == 3
+        assert stats['unresolved_points'] == 3
+        assert stats['resolved_points_percentage'] == 50
+        assert stats['total_issues'] == 2
+        assert stats['resolved_issues'] == 1
+        assert stats['unresolved_issues'] == 1
+        assert stats['resolved_issues_percentage'] == 50
+
+    @patch('linear_tools.commands.get_statistics.fetch_issues')
+    @patch('linear_tools.commands.get_statistics.parse_query')
+    def test_empty(self, mock_parse, mock_fetch):
+        mock_parse.return_value = {}
+        mock_fetch.return_value = []
+        stats = get_query_statistics('team = NONE')
+        assert stats['total_points'] == 0
+        assert stats['resolved_points'] == 0
+        assert stats['unresolved_points'] == 0
+        assert stats['resolved_points_percentage'] == 0
+        assert stats['total_issues'] == 0
+        assert stats['resolved_issues'] == 0
+        assert stats['unresolved_issues'] == 0
+        assert stats['resolved_issues_percentage'] == 0
