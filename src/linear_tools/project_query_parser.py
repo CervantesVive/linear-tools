@@ -5,7 +5,6 @@ Supports: team, label, state, lead, priority, name, createdAt, updatedAt,
           startDate, targetDate (and aliases: created, updated).
 """
 from lark import Transformer, exceptions
-from lark.exceptions import VisitError
 
 from linear_tools.query_parser import (
     SCALAR_OPERATOR_MAP,
@@ -173,7 +172,7 @@ def parse_project_query(query_string):
     try:
         tree = _get_parser().parse(query_string.strip())
         return ProjectFilterCompiler().transform(tree)
-    except VisitError as e:
+    except exceptions.VisitError as e:
         # Lark wraps transformer exceptions in VisitError; unwrap ValueError
         if isinstance(e.__context__, ValueError):
             raise e.__context__
