@@ -11,6 +11,31 @@ DEFAULT_ESTIMATE = 3
 COMPLETED_STATE_TYPES = {'completed', 'cancelled'}
 
 
+def extract_slug_id(project_input):
+    """Extract the short hex slug ID from a project URL, full slug, or bare ID.
+
+    Accepts:
+      - Full URL:   'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e/issues?...'
+      - Full slug:  'navbar-revamp-offsite-2d728a27e93e'
+      - Short ID:   '2d728a27e93e'
+
+    Returns:
+        str: The last hyphen-delimited token of the slug (the short hex ID).
+
+    Raises:
+        ValueError: If the input is empty or a URL cannot be parsed.
+    """
+    value = project_input.strip()
+    if not value:
+        raise ValueError("Project input cannot be empty.")
+    if value.startswith('http'):
+        parts = value.split('/project/')
+        if len(parts) < 2:
+            raise ValueError(f"Could not parse project slug from URL: {project_input!r}")
+        value = parts[1].split('/')[0].split('?')[0]
+    return value.split('-')[-1]
+
+
 def calculate_estimates_for_issues(issues):
     """Calculate estimate totals for a list of normalized issue dicts.
 

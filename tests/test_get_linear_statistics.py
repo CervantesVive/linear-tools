@@ -8,6 +8,7 @@ from linear_tools.commands.get_statistics import (
     DEFAULT_ESTIMATE,
     COMPLETED_STATE_TYPES,
     calculate_estimates_for_issues,
+    extract_slug_id,
 )
 
 
@@ -173,3 +174,35 @@ class TestGetQueryStatistics:
         assert stats['resolved_issues'] == 0
         assert stats['unresolved_issues'] == 0
         assert stats['resolved_issues_percentage'] == 0
+
+
+class TestExtractSlugId:
+    """Tests for extract_slug_id — pure function, no I/O."""
+
+    def test_full_url_with_query_params(self):
+        url = (
+            'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e'
+            '/issues?layout=list&ordering=priority'
+        )
+        assert extract_slug_id(url) == '2d728a27e93e'
+
+    def test_full_url_no_trailing_path(self):
+        url = 'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e'
+        assert extract_slug_id(url) == '2d728a27e93e'
+
+    def test_full_slug(self):
+        assert extract_slug_id('navbar-revamp-offsite-2d728a27e93e') == '2d728a27e93e'
+
+    def test_short_id_only(self):
+        assert extract_slug_id('2d728a27e93e') == '2d728a27e93e'
+
+    def test_strips_whitespace(self):
+        assert extract_slug_id('  2d728a27e93e  ') == '2d728a27e93e'
+
+    def test_empty_raises(self):
+        with pytest.raises(ValueError, match="cannot be empty"):
+            extract_slug_id('')
+
+    def test_whitespace_only_raises(self):
+        with pytest.raises(ValueError, match="cannot be empty"):
+            extract_slug_id('   ')
