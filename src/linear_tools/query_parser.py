@@ -23,6 +23,7 @@ Supported fields:
   project     - Project name
   cycle       - Cycle name
   title       - Issue title (substring match with = or contains)
+  identifier  - Issue identifier (e.g. WEB-1); = / != / in supported
 
 Supported operators:
   =   exact match (or substring for assignee/title/project/cycle)
@@ -78,7 +79,7 @@ PRIORITY_MAP = {
 # Canonical field names (after alias resolution)
 SUPPORTED_FIELDS = frozenset({
     'team', 'state', 'assignee', 'label', 'priority',
-    'estimate', 'createdAt', 'updatedAt', 'project', 'cycle', 'title',
+    'estimate', 'createdAt', 'updatedAt', 'project', 'cycle', 'title', 'identifier',
 })
 
 FIELD_ALIASES = {
@@ -255,6 +256,17 @@ def build_condition(field, op, value):
         if op in ('=', 'contains'):
             return {'title': {'containsIgnoreCase': value}}
         raise ValueError("'title' supports = and contains operators.")
+
+    # --- identifier ----------------------------------------------------
+    elif field == 'identifier':
+        if op == '=':
+            return {'identifier': {'eq': value}}
+        elif op == '!=':
+            return {'identifier': {'neq': value}}
+        elif op == 'in' or is_list:
+            vals = value if is_list else [value]
+            return {'identifier': {'in': vals}}
+        raise ValueError("'identifier' supports =, !=, and in operators.")
 
     raise ValueError(f"Field '{field}' has no handler (this is a bug).")
 

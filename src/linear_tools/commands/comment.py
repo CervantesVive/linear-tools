@@ -1,6 +1,5 @@
 """Post markdown comments to Linear issues matched by a query."""
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 from typing import Annotated
@@ -96,4 +95,36 @@ def comment(
             typer.echo(f"Error: file not found: {file}", err=True)
             raise typer.Exit(1)
 
-    raise NotImplementedError  # remaining logic added in Task 4
+    try:
+        graphql_filter = parse_query(query)
+    except (SyntaxError, ValueError) as e:
+        typer.echo(f"Query error: {e}", err=True)
+        raise typer.Exit(1)
+
+    try:
+        issues = fetch_issues_for_comment(graphql_filter)
+    except Exception as e:
+        typer.echo(f"API error: {e}", err=True)
+        raise typer.Exit(1)
+
+    if not issues:
+        typer.echo("No issues found for query.", err=True)
+        raise typer.Exit(1)
+
+    if len(issues) > 1 and not yes:
+        typer.echo(f"\nMatched {len(issues)} tickets:")
+        for issue in issues:
+            typer.echo(f"  {issue['identifier']}  {issue['title']}")
+        confirmed = typer.confirm(f"\nPost comment to {len(issues)} tickets?", default=False)
+        if not confirmed:
+            raise typer.Exit(0)
+
+    results = post_comments(issues, body)
+
+    if json_output:
+        typer.echo(json.dumps(results, indent=2))
+    else:
+        print_table(results)
+
+    if any(not r['success'] for r in results):
+        raise typer.Exit(1)

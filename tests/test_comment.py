@@ -105,3 +105,63 @@ class TestCommentCommandValidation:
         ])
         assert result.exit_code == 1
         assert 'not found' in result.output.lower()
+
+
+class TestCommentCommandExecution:
+    def _single(self):
+        return _page([_issue('WEB-1', 'My ticket')])
+
+    def _multi(self):
+        return _page([_issue('WEB-1', 'First'), _issue('WEB-2', 'Second')])
+
+    def test_single_ticket_posts_without_confirmation(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._single()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')):
+            result = runner.invoke(app, ['--query', 'identifier = WEB-1', '--message', 'hello'])
+        assert result.exit_code == 0
+        assert 'WEB-1' in result.output
+
+    def test_multiple_tickets_prompts_shows_list(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._multi()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')):
+            result = runner.invoke(app, ['--query', 'team = WEB', '--message', 'hello'], input='n\n')
+        assert result.exit_code == 0
+        assert 'WEB-1' in result.output
+        assert 'WEB-2' in result.output
+
+    def test_confirmation_declined_exits_cleanly(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._multi()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue') as mock_post:
+            result = runner.invoke(app, ['--query', 'team = WEB', '--message', 'hello'], input='n\n')
+        assert result.exit_code == 0
+        mock_post.assert_not_called()
+
+    def test_yes_flag_skips_confirmation(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._multi()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')):
+            result = runner.invoke(app, ['--query', 'team = WEB', '--message', 'hello', '--yes'])
+        assert result.exit_code == 0
+        assert 'WEB-1' in result.output
+        assert 'WEB-2' in result.output
+
+    def test_exits_1_when_no_issues_found(self):
+        with patch('linear_tools.utils.graphql_request', return_value=_page([])):
+            result = runner.invoke(app, ['--query', 'identifier = WEB-9999', '--message', 'hello'])
+        assert result.exit_code == 1
+        assert 'no issues' in result.output.lower()
+
+    def test_json_output_format(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._single()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')):
+            result = runner.invoke(app, ['--query', 'identifier = WEB-1', '--message', 'hello', '--json'])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert isinstance(data, list)
+        assert data[0]['identifier'] == 'WEB-1'
+        assert data[0]['success'] is True
+
+    def test_exit_code_1_when_any_comment_fails(self):
+        with patch('linear_tools.utils.graphql_request', return_value=self._single()), \
+             patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(False, 'Mutation failed')):
+            result = runner.invoke(app, ['--query', 'identifier = WEB-1', '--message', 'hello'])
+        assert result.exit_code == 1
