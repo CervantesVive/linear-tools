@@ -45,7 +45,19 @@ def fetch_issues_for_comment(graphql_filter):
 
 
 def post_comments(issues, body):
-    raise NotImplementedError
+    """Post body as a comment to each issue. Returns list of result dicts."""
+    results = []
+    for issue in issues:
+        identifier = issue['identifier']
+        try:
+            success, message = linear_utils.post_comment_to_linear_issue(identifier, body)
+            result = {'identifier': identifier, 'title': issue.get('title', ''), 'success': success}
+            if not success:
+                result['error'] = message
+        except Exception as e:
+            result = {'identifier': identifier, 'title': issue.get('title', ''), 'success': False, 'error': str(e)}
+        results.append(result)
+    return results
 
 
 def print_table(results):

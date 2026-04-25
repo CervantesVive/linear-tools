@@ -52,3 +52,32 @@ class TestFetchIssuesForComment:
         with patch('linear_tools.utils.graphql_request', return_value=_page([])):
             result = fetch_issues_for_comment({})
         assert result == []
+
+
+class TestPostComments:
+    def test_posts_to_all_issues(self):
+        issues = [_issue('WEB-1'), _issue('WEB-2')]
+        with patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')) as mock:
+            results = post_comments(issues, 'hello')
+        assert len(results) == 2
+        assert mock.call_count == 2
+
+    def test_collects_success_result(self):
+        issues = [_issue('WEB-1', 'My ticket')]
+        with patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(True, 'Comment posted')):
+            results = post_comments(issues, 'body')
+        assert results[0] == {'identifier': 'WEB-1', 'title': 'My ticket', 'success': True}
+
+    def test_collects_failure_result(self):
+        issues = [_issue('WEB-1', 'My ticket')]
+        with patch('linear_tools.utils.post_comment_to_linear_issue', return_value=(False, 'Issue not found')):
+            results = post_comments(issues, 'body')
+        assert results[0]['success'] is False
+        assert results[0]['error'] == 'Issue not found'
+
+    def test_captures_exception_as_failure(self):
+        issues = [_issue('WEB-1', 'My ticket')]
+        with patch('linear_tools.utils.post_comment_to_linear_issue', side_effect=Exception('Network error')):
+            results = post_comments(issues, 'body')
+        assert results[0]['success'] is False
+        assert 'Network error' in results[0]['error']
