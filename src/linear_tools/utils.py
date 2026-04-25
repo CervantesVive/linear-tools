@@ -527,3 +527,33 @@ def post_comment_to_linear_issue(identifier, body):
     if success:
         return (True, "Comment posted")
     return (False, f"Mutation failed for {identifier}")
+
+
+_ATTACHMENT_LINK_URL_MUTATION = """
+mutation AttachLinkUrl($issueId: String!, $url: String!, $title: String) {
+  attachmentLinkURL(issueId: $issueId, url: $url, title: $title) {
+    success
+    attachment {
+      id
+      url
+      title
+    }
+  }
+}
+"""
+
+
+def attach_url_to_issue(issue_uuid, url, title=None):
+    """Attach a URL link to a Linear issue via the attachmentLinkURL mutation.
+
+    Args:
+        issue_uuid: Internal UUID of the issue.
+        url: URL to attach.
+        title: Optional display title for the link.
+
+    Returns:
+        dict: {"success": bool, "attachment": {...}} from the mutation response.
+    """
+    variables = {'issueId': issue_uuid, 'url': url, 'title': title}
+    data = graphql_request(_ATTACHMENT_LINK_URL_MUTATION, variables=variables)
+    return data.get('attachmentLinkURL', {})
