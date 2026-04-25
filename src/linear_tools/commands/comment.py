@@ -61,7 +61,13 @@ def post_comments(issues, body):
 
 
 def print_table(results):
-    raise NotImplementedError
+    """Print per-ticket results as a human-readable table."""
+    for r in results:
+        mark = '✓' if r['success'] else '✗'
+        detail = r.get('error', '') if not r['success'] else 'Comment posted'
+        typer.echo(f"  {r['identifier']}  {mark}  {r['title']}  — {detail}")
+    success_count = sum(1 for r in results if r['success'])
+    typer.echo(f"\n{success_count}/{len(results)} comment(s) posted.")
 
 
 def comment(
@@ -72,4 +78,22 @@ def comment(
     json_output: Annotated[bool, typer.Option("--json", help="Output results as JSON")] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Enable verbose output")] = False,
 ):
-    raise NotImplementedError
+    if verbose:
+        linear_utils.VERBOSE = True
+
+    if message is None and file is None:
+        typer.echo("Error: provide --message or --file.", err=True)
+        raise typer.Exit(1)
+    if message is not None and file is not None:
+        typer.echo("Error: --message and --file are mutually exclusive.", err=True)
+        raise typer.Exit(1)
+
+    body = message
+    if file is not None:
+        try:
+            body = Path(file).read_text()
+        except FileNotFoundError:
+            typer.echo(f"Error: file not found: {file}", err=True)
+            raise typer.Exit(1)
+
+    raise NotImplementedError  # remaining logic added in Task 4

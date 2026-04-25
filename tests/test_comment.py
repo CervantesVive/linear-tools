@@ -81,3 +81,27 @@ class TestPostComments:
             results = post_comments(issues, 'body')
         assert results[0]['success'] is False
         assert 'Network error' in results[0]['error']
+
+
+class TestCommentCommandValidation:
+    def test_errors_when_neither_message_nor_file(self):
+        result = runner.invoke(app, ['--query', 'identifier = WEB-1'])
+        assert result.exit_code == 1
+        assert '--message' in result.output or 'provide' in result.output.lower()
+
+    def test_errors_when_both_message_and_file(self):
+        result = runner.invoke(app, [
+            '--query', 'identifier = WEB-1',
+            '--message', 'hi',
+            '--file', 'plan.md',
+        ])
+        assert result.exit_code == 1
+        assert 'mutually exclusive' in result.output.lower()
+
+    def test_errors_when_file_not_found(self):
+        result = runner.invoke(app, [
+            '--query', 'identifier = WEB-1',
+            '--file', '/nonexistent/plan.md',
+        ])
+        assert result.exit_code == 1
+        assert 'not found' in result.output.lower()
