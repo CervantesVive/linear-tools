@@ -7,6 +7,7 @@ from linear_tools.commands.sync_jira_metadata import sync_jira_metadata
 from linear_tools.commands.to_jira import to_jira
 from linear_tools.commands.get_statistics import get_statistics
 from linear_tools.commands.export_projects import export_projects
+from linear_tools.commands.comment import comment
 
 app = typer.Typer(
     name="linear",
@@ -20,6 +21,7 @@ app.command(name="add-to-cycle")(add_to_cycle)
 app.command(name="sync-jira-metadata")(sync_jira_metadata)
 app.command(name="to-jira")(to_jira)
 app.command(name="get-statistics")(get_statistics)
+app.command(name="comment")(comment)
 
 if __name__ == "__main__":
     app()
