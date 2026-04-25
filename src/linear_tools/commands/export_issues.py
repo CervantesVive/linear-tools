@@ -206,13 +206,18 @@ def output_csv(issues, fields):
 
 
 def export_issues(
-    query: Annotated[str, typer.Option("--query", "-q", help="JQL-like filter query string (required)")],
+    query: Annotated[Optional[str], typer.Option("--query", "-q", help="JQL-like filter query string")] = None,
+    issue_id: Annotated[Optional[list[str]], typer.Option("--id", help="Issue identifier(s), e.g. WEB-1086. Can be repeated.")] = None,
     csv_output: Annotated[bool, typer.Option("--csv", help="Output CSV instead of JSON")] = False,
     fields: Annotated[Optional[str], typer.Option("--fields", help=f"Comma-separated fields. Available: {', '.join(ALL_FIELDS)}")] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output")] = False,
 ):
     if verbose:
         linear_utils.VERBOSE = True
+
+    if not query and not issue_id:
+        typer.echo("Error: at least one of --query or --id is required.", err=True)
+        raise typer.Exit(1)
 
     selected_fields = None
     if fields:
@@ -222,11 +227,28 @@ def export_issues(
             typer.echo(f"Error: unknown field(s): {', '.join(unknown)}. Available: {', '.join(ALL_FIELDS)}", err=True)
             raise typer.Exit(1)
 
-    try:
-        graphql_filter = parse_query(query)
-    except (SyntaxError, ValueError) as e:
-        typer.echo(f"Query error: {e}", err=True)
-        raise typer.Exit(1)
+    filters = []
+
+    if issue_id:
+        id_query = (
+            f'identifier in [{", ".join(issue_id)}]'
+            if len(issue_id) > 1
+            else f'identifier = {issue_id[0]}'
+        )
+        try:
+            filters.append(parse_query(id_query))
+        except (SyntaxError, ValueError) as e:
+            typer.echo(f"ID error: {e}", err=True)
+            raise typer.Exit(1)
+
+    if query:
+        try:
+            filters.append(parse_query(query))
+        except (SyntaxError, ValueError) as e:
+            typer.echo(f"Query error: {e}", err=True)
+            raise typer.Exit(1)
+
+    graphql_filter = filters[0] if len(filters) == 1 else {'and': filters}
 
     if linear_utils.VERBOSE:
         typer.echo(f"Compiled filter:\n{json.dumps(graphql_filter, indent=2)}", err=True)

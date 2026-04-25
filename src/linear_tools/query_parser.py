@@ -8,6 +8,8 @@ Parses expressions like:
   priority >= High AND (label in [Bug, P0] OR state = Done)
   team = WEB AND created > 2025-01-01 AND updated < 2025-04-01
   title contains "auth" AND assignee = "Dean Hamilton"
+  identifier = WEB-1086
+  identifier in [WEB-1086, WEB-1087]
 
 Returns a Linear IssueFilter dict suitable for the GraphQL $filter variable.
 
@@ -23,7 +25,8 @@ Supported fields:
   project     - Project name
   cycle       - Cycle name
   title       - Issue title (substring match with = or contains)
-  identifier  - Issue identifier (e.g. WEB-1); = / != / in supported
+  identifier  - Issue identifier (e.g. WEB-1086); decomposes to team+number filter
+  number      - Issue number within its team (numeric)
 
 Supported operators:
   =   exact match (or substring for assignee/title/project/cycle)
@@ -39,6 +42,8 @@ Priority comparison note:
   Linear's priority scale is inverted (1=Urgent highest, 4=Low lowest).
   'priority >= High' means "High or more urgent" = Urgent + High = {in: [1, 2]}.
 """
+
+import re
 
 from lark import Lark, Transformer, exceptions
 
@@ -79,18 +84,22 @@ PRIORITY_MAP = {
 # Canonical field names (after alias resolution)
 SUPPORTED_FIELDS = frozenset({
     'team', 'state', 'assignee', 'label', 'priority',
-    'estimate', 'createdAt', 'updatedAt', 'project', 'cycle', 'title', 'identifier',
+    'estimate', 'createdAt', 'updatedAt', 'project', 'cycle', 'title',
+    'identifier', 'number',
 })
 
 FIELD_ALIASES = {
     'created': 'createdAt',
     'updated': 'updatedAt',
+    'id': 'identifier',
 }
 
 SCALAR_OPERATOR_MAP = {
     '=': 'eq', '!=': 'neq',
     '>': 'gt', '>=': 'gte', '<': 'lt', '<=': 'lte',
 }
+
+_IDENTIFIER_RE = re.compile(r'^([A-Z]+)-(\d+)$', re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +151,30 @@ def _priority_range_filter(op, num):
     if len(matching) == 1:
         return {'priority': {'eq': matching[0]}}
     return {'priority': {'in': matching}}
+
+
+# ---------------------------------------------------------------------------
+# Identifier helpers
+# ---------------------------------------------------------------------------
+
+def _parse_identifier(value):
+    """Parse an issue identifier like 'WEB-1086' into (team_key, number).
+
+    Args:
+        value: Identifier string, e.g. 'WEB-1086' or 'web-1086'
+
+    Returns:
+        tuple: (team_key_upper: str, number: int)
+
+    Raises:
+        ValueError: If the format is not TEAM-NUMBER.
+    """
+    m = _IDENTIFIER_RE.match(value.strip())
+    if not m:
+        raise ValueError(
+            f"Invalid identifier format '{value}'. Expected TEAM-NUMBER, e.g. 'WEB-1086'."
+        )
+    return m.group(1).upper(), int(m.group(2))
 
 
 # ---------------------------------------------------------------------------
@@ -260,13 +293,56 @@ def build_condition(field, op, value):
     # --- identifier ----------------------------------------------------
     elif field == 'identifier':
         if op == '=':
-            return {'identifier': {'eq': value}}
+            team_key, num = _parse_identifier(value)
+            return {'and': [
+                {'team': {'key': {'eq': team_key}}},
+                {'number': {'eq': num}},
+            ]}
         elif op == '!=':
-            return {'identifier': {'neq': value}}
+            team_key, num = _parse_identifier(value)
+            return {'or': [
+                {'team': {'key': {'neq': team_key}}},
+                {'number': {'neq': num}},
+            ]}
         elif op == 'in' or is_list:
             vals = value if is_list else [value]
-            return {'identifier': {'in': vals}}
-        raise ValueError("'identifier' supports =, !=, and in operators.")
+            parsed = [_parse_identifier(v) for v in vals]
+            by_team = {}
+            for team_key, num in parsed:
+                by_team.setdefault(team_key, []).append(num)
+            if len(by_team) == 1:
+                team_key, numbers = next(iter(by_team.items()))
+                return {'and': [
+                    {'team': {'key': {'eq': team_key}}},
+                    {'number': {'in': numbers}},
+                ]}
+            clauses = [
+                {'and': [{'team': {'key': {'eq': t}}}, {'number': {'in': nums}}]}
+                for t, nums in by_team.items()
+            ]
+            return {'or': clauses}
+        raise ValueError(
+            "'identifier' supports =, !=, and in operators. "
+            "Value must be TEAM-NUMBER format, e.g. 'WEB-1086'."
+        )
+
+    # --- number --------------------------------------------------------
+    elif field == 'number':
+        if op == 'in' or is_list:
+            vals = value if is_list else [value]
+            try:
+                nums = [int(v) for v in vals]
+            except (ValueError, TypeError):
+                raise ValueError(f"'number' values must be integers, got {vals}.")
+            return {'number': {'in': nums}}
+        gql_op = SCALAR_OPERATOR_MAP.get(op)
+        if gql_op is None:
+            raise ValueError(f"'number' does not support '{op}' operator.")
+        try:
+            num = int(value)
+        except (ValueError, TypeError):
+            raise ValueError(f"'number' value must be an integer, got '{value}'.")
+        return {'number': {gql_op: num}}
 
     raise ValueError(f"Field '{field}' has no handler (this is a bug).")
 
