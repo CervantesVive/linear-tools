@@ -179,3 +179,106 @@ class TestFetchHistory:
         with patch('linear_tools.utils.graphql_request', return_value=_history_page([])):
             result = fetch_history('uuid-1')
         assert result == []
+
+
+import json as json_mod
+
+from typer.testing import CliRunner
+from typer import Typer
+
+from linear_tools.commands.issue_history import issue_history
+
+runner = CliRunner()
+app = Typer()
+app.command()(issue_history)
+
+
+def _make_issue(identifier='WEB-1', title='My issue', uid='uuid-1'):
+    return {'id': uid, 'identifier': identifier, 'title': title}
+
+
+def _make_event(from_state='Backlog', to_state='In Progress'):
+    return {
+        'id': 'e1',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'actor': {'displayName': 'Alice', 'name': 'alice'},
+        'fromState': {'name': from_state} if from_state else None,
+        'toState': {'name': to_state} if to_state else None,
+        'fromAssignee': None,
+        'toAssignee': None,
+        'fromPriority': None,
+        'toPriority': None,
+    }
+
+
+class TestIssueHistoryCommand:
+    def test_no_args_prints_usage_and_exits_1(self):
+        result = runner.invoke(app, [])
+        assert result.exit_code == 1
+        assert 'Options' in result.output or '--id' in result.output
+
+    def test_unknown_field_exits_1(self):
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+            result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'badfield'])
+        assert result.exit_code == 1
+        assert 'badfield' in result.output or 'unknown' in result.output.lower()
+
+    def test_no_issues_found_exits_0(self):
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[]):
+            result = runner.invoke(app, ['--id', 'WEB-9999'])
+        assert result.exit_code == 0
+
+    def test_outputs_json_by_default(self):
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+            result = runner.invoke(app, ['--id', 'WEB-1'])
+        assert result.exit_code == 0
+        data = json_mod.loads(result.output)
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]['identifier'] == 'WEB-1'
+        assert data[0]['fromState'] == 'Backlog'
+        assert data[0]['toState'] == 'In Progress'
+        assert data[0]['actor'] == 'Alice'
+
+    def test_noop_events_filtered_out(self):
+        noop = {
+            'id': 'e_noop', 'createdAt': '2026-01-01T00:00:00.000Z',
+            'actor': {'displayName': 'Alice', 'name': 'alice'},
+            'fromState': None, 'toState': None,
+            'fromAssignee': None, 'toAssignee': None,
+            'fromPriority': None, 'toPriority': None,
+        }
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[noop, _make_event()]):
+            result = runner.invoke(app, ['--id', 'WEB-1'])
+        assert result.exit_code == 0
+        data = json_mod.loads(result.output)
+        assert len(data) == 1
+
+    def test_csv_output_has_header_and_row(self):
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+            result = runner.invoke(app, ['--id', 'WEB-1', '--csv'])
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        assert lines[0].startswith('identifier')
+        assert 'WEB-1' in lines[1]
+
+    def test_fields_flag_restricts_output(self):
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+            result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'identifier,fromState,toState'])
+        assert result.exit_code == 0
+        data = json_mod.loads(result.output)
+        assert set(data[0].keys()) == {'identifier', 'fromState', 'toState'}
+
+    def test_multiple_issues_aggregates_all_events(self):
+        issues = [_make_issue('WEB-1', uid='u1'), _make_issue('WEB-2', uid='u2')]
+        with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=issues), \
+             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+            result = runner.invoke(app, ['--query', 'team = WEB'])
+        assert result.exit_code == 0
+        data = json_mod.loads(result.output)
+        assert len(data) == 2

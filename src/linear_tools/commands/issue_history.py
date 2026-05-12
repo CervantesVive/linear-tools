@@ -136,3 +136,86 @@ def fetch_history(issue_uuid):
     if linear_utils.VERBOSE:
         print(f"  {len(all_events)} history event(s) for {issue_uuid}", file=sys.stderr)
     return all_events
+
+
+def issue_history(
+    ctx: typer.Context,
+    query: Annotated[Optional[str], typer.Option("--query", "-q", help="JQL-like filter query string")] = None,
+    issue_id: Annotated[Optional[list[str]], typer.Option("--id", help="Issue identifier(s), e.g. WEB-123. Can be repeated.")] = None,
+    csv_output: Annotated[bool, typer.Option("--csv", help="Output CSV instead of JSON")] = False,
+    fields: Annotated[Optional[str], typer.Option("--fields", help=f"Comma-separated fields. Available: {', '.join(ALL_FIELDS)}")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output")] = False,
+):
+    """Retrieve field-level change history for Linear issues."""
+    if verbose:
+        linear_utils.VERBOSE = True
+
+    if not query and not issue_id:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(1)
+
+    selected_fields = None
+    if fields:
+        selected_fields = [f.strip() for f in fields.split(",")]
+        unknown = [f for f in selected_fields if f not in ALL_FIELDS]
+        if unknown:
+            typer.echo(f"Error: unknown field(s): {', '.join(unknown)}. Available: {', '.join(ALL_FIELDS)}", err=True)
+            raise typer.Exit(1)
+
+    filters = []
+    if issue_id:
+        id_query = (
+            f'identifier in [{", ".join(issue_id)}]'
+            if len(issue_id) > 1
+            else f'identifier = {issue_id[0]}'
+        )
+        try:
+            filters.append(parse_query(id_query))
+        except (SyntaxError, ValueError) as e:
+            typer.echo(f"ID error: {e}", err=True)
+            raise typer.Exit(1)
+
+    if query:
+        try:
+            filters.append(parse_query(query))
+        except (SyntaxError, ValueError) as e:
+            typer.echo(f"Query error: {e}", err=True)
+            raise typer.Exit(1)
+
+    graphql_filter = filters[0] if len(filters) == 1 else {'and': filters}
+
+    try:
+        issues = _fetch_issues_for_history(graphql_filter)
+    except Exception as e:
+        typer.echo(f"API error: {e}", err=True)
+        raise typer.Exit(1)
+
+    if not issues:
+        typer.echo("No issues found.", err=True)
+        raise typer.Exit(0)
+
+    rows = []
+    for issue in issues:
+        try:
+            events = fetch_history(issue['id'])
+        except Exception as e:
+            typer.echo(f"API error fetching history for {issue['identifier']}: {e}", err=True)
+            raise typer.Exit(1)
+        for event in events:
+            if not _is_noop(event):
+                rows.append(normalize_history_event(issue, event))
+
+    if csv_output:
+        fieldnames = selected_fields if selected_fields else ALL_FIELDS
+        data = [{k: r.get(k) for k in fieldnames} for r in rows] if selected_fields else rows
+        writer = csv.DictWriter(
+            sys.stdout,
+            fieldnames=fieldnames,
+            extrasaction='ignore',
+            lineterminator='\n',
+        )
+        writer.writeheader()
+        writer.writerows(data)
+    else:
+        output = [{k: r.get(k) for k in selected_fields} for r in rows] if selected_fields else rows
+        typer.echo(json.dumps(output, indent=2, default=str))
