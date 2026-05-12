@@ -32,14 +32,10 @@ def _priority_label(value):
 
 
 def _is_noop(event):
-    return all([
-        event.get('fromState') is None,
-        event.get('toState') is None,
-        event.get('fromAssignee') is None,
-        event.get('toAssignee') is None,
-        event.get('fromPriority') is None,
-        event.get('toPriority') is None,
-    ])
+    return all(
+        event.get(k) is None
+        for k in ('fromState', 'toState', 'fromAssignee', 'toAssignee', 'fromPriority', 'toPriority')
+    )
 
 
 def normalize_history_event(issue, event):
@@ -53,10 +49,10 @@ def normalize_history_event(issue, event):
         'issueTitle':   issue.get('title'),
         'eventAt':      event.get('createdAt'),
         'actor':        actor.get('displayName') or actor.get('name'),
-        'fromState':    from_state.get('name') if from_state else None,
-        'toState':      to_state.get('name') if to_state else None,
-        'fromAssignee': from_assignee.get('displayName') or from_assignee.get('name') if from_assignee else None,
-        'toAssignee':   to_assignee.get('displayName') or to_assignee.get('name') if to_assignee else None,
+        'fromState':    from_state.get('name'),
+        'toState':      to_state.get('name'),
+        'fromAssignee': from_assignee.get('displayName') or from_assignee.get('name'),
+        'toAssignee':   to_assignee.get('displayName') or to_assignee.get('name'),
         'fromPriority': _priority_label(event.get('fromPriority')),
         'toPriority':   _priority_label(event.get('toPriority')),
     }
