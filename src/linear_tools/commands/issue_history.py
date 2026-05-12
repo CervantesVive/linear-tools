@@ -219,3 +219,5 @@ def issue_history(
     else:
         output = [{k: r.get(k) for k in selected_fields} for r in rows] if selected_fields else rows
         typer.echo(json.dumps(output, indent=2, default=str))
+
+    typer.echo(f"Exported {len(rows)} event(s).", err=True)

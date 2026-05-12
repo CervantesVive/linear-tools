@@ -215,14 +215,14 @@ class TestIssueHistoryCommand:
     def test_no_args_prints_usage_and_exits_1(self):
         result = runner.invoke(app, [])
         assert result.exit_code == 1
-        assert 'Options' in result.output or '--id' in result.output
+        assert 'Options' in result.stdout or '--id' in result.stdout
 
     def test_unknown_field_exits_1(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'badfield'])
         assert result.exit_code == 1
-        assert 'badfield' in result.output or 'unknown' in result.output.lower()
+        assert 'badfield' in result.stderr or 'unknown' in result.stderr.lower()
 
     def test_no_issues_found_exits_0(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[]):
@@ -234,7 +234,7 @@ class TestIssueHistoryCommand:
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1'])
         assert result.exit_code == 0
-        data = json_mod.loads(result.output)
+        data = json_mod.loads(result.stdout)
         assert isinstance(data, list)
         assert len(data) == 1
         assert data[0]['identifier'] == 'WEB-1'
@@ -254,7 +254,7 @@ class TestIssueHistoryCommand:
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[noop, _make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1'])
         assert result.exit_code == 0
-        data = json_mod.loads(result.output)
+        data = json_mod.loads(result.stdout)
         assert len(data) == 1
 
     def test_csv_output_has_header_and_row(self):
@@ -262,7 +262,7 @@ class TestIssueHistoryCommand:
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--csv'])
         assert result.exit_code == 0
-        lines = result.output.strip().splitlines()
+        lines = result.stdout.strip().splitlines()
         assert lines[0].startswith('identifier')
         assert 'WEB-1' in lines[1]
 
@@ -271,7 +271,7 @@ class TestIssueHistoryCommand:
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'identifier,fromState,toState'])
         assert result.exit_code == 0
-        data = json_mod.loads(result.output)
+        data = json_mod.loads(result.stdout)
         assert set(data[0].keys()) == {'identifier', 'fromState', 'toState'}
 
     def test_multiple_issues_aggregates_all_events(self):
@@ -280,5 +280,5 @@ class TestIssueHistoryCommand:
              patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--query', 'team = WEB'])
         assert result.exit_code == 0
-        data = json_mod.loads(result.output)
+        data = json_mod.loads(result.stdout)
         assert len(data) == 2
