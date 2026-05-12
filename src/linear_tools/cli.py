@@ -10,6 +10,7 @@ from linear_tools.commands.export_projects import export_projects
 from linear_tools.commands.comment import comment
 from linear_tools.commands.add_links import add_links
 from linear_tools.commands.close_merged import close_merged
+from linear_tools.commands.issue_history import issue_history
 
 app = typer.Typer(
     name="linear",
@@ -26,6 +27,7 @@ app.command(name="get-statistics")(get_statistics)
 app.command(name="comment")(comment)
 app.command(name="add-links")(add_links)
 app.command(name="close-merged")(close_merged)
+app.command(name="issue-history")(issue_history)
 
 if __name__ == "__main__":
     app()
