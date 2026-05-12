@@ -101,3 +101,81 @@ class TestNormalizeHistoryEvent:
         event = _event(actor=None)
         row = normalize_history_event(_issue(), event)
         assert row['actor'] is None
+
+
+from unittest.mock import patch
+
+from linear_tools.commands.issue_history import (
+    _fetch_issues_for_history,
+    fetch_history,
+)
+
+
+def _issues_page(nodes, has_next=False, cursor=None):
+    return {
+        'issues': {
+            'nodes': nodes,
+            'pageInfo': {'hasNextPage': has_next, 'endCursor': cursor},
+        }
+    }
+
+
+def _history_page(nodes, has_next=False, cursor=None):
+    return {
+        'issue': {
+            'history': {
+                'nodes': nodes,
+                'pageInfo': {'hasNextPage': has_next, 'endCursor': cursor},
+            }
+        }
+    }
+
+
+class TestFetchIssuesForHistory:
+    def test_returns_issues_from_single_page(self):
+        nodes = [{'id': 'u1', 'identifier': 'WEB-1', 'title': 'T'}]
+        with patch('linear_tools.utils.graphql_request', return_value=_issues_page(nodes)) as gql:
+            result = _fetch_issues_for_history({'team': {'key': {'eq': 'WEB'}}})
+        assert len(result) == 1
+        assert result[0]['identifier'] == 'WEB-1'
+        gql.assert_called_once()
+
+    def test_paginates_through_all_pages(self):
+        page1 = _issues_page([{'id': 'u1', 'identifier': 'WEB-1', 'title': 'T'}], has_next=True, cursor='c1')
+        page2 = _issues_page([{'id': 'u2', 'identifier': 'WEB-2', 'title': 'T'}])
+        with patch('linear_tools.utils.graphql_request', side_effect=[page1, page2]) as gql:
+            result = _fetch_issues_for_history({})
+        assert len(result) == 2
+        assert gql.call_count == 2
+        second_vars = gql.call_args_list[1][1]['variables']
+        assert second_vars['after'] == 'c1'
+
+    def test_returns_empty_list_when_no_issues(self):
+        with patch('linear_tools.utils.graphql_request', return_value=_issues_page([])):
+            result = _fetch_issues_for_history({})
+        assert result == []
+
+
+class TestFetchHistory:
+    def test_returns_events_from_single_page(self):
+        event = {'id': 'e1', 'createdAt': '2026-01-01T00:00:00.000Z'}
+        with patch('linear_tools.utils.graphql_request', return_value=_history_page([event])) as gql:
+            result = fetch_history('uuid-1')
+        assert len(result) == 1
+        assert result[0]['id'] == 'e1'
+        gql.assert_called_once()
+
+    def test_paginates_through_all_pages(self):
+        page1 = _history_page([{'id': 'e1'}], has_next=True, cursor='c1')
+        page2 = _history_page([{'id': 'e2'}])
+        with patch('linear_tools.utils.graphql_request', side_effect=[page1, page2]) as gql:
+            result = fetch_history('uuid-1')
+        assert len(result) == 2
+        assert gql.call_count == 2
+        second_vars = gql.call_args_list[1][1]['variables']
+        assert second_vars['after'] == 'c1'
+
+    def test_returns_empty_list_when_no_history(self):
+        with patch('linear_tools.utils.graphql_request', return_value=_history_page([])):
+            result = fetch_history('uuid-1')
+        assert result == []

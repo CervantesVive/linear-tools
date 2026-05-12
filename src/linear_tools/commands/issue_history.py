@@ -56,3 +56,83 @@ def normalize_history_event(issue, event):
         'fromPriority': _priority_label(event.get('fromPriority')),
         'toPriority':   _priority_label(event.get('toPriority')),
     }
+
+
+_ISSUES_QUERY = """
+query FetchIssuesForHistory($filter: IssueFilter!, $first: Int!, $after: String) {
+  issues(filter: $filter, first: $first, after: $after) {
+    nodes {
+      id
+      identifier
+      title
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+"""
+
+_HISTORY_QUERY = """
+query IssueHistory($id: String!, $after: String) {
+  issue(id: $id) {
+    history(first: 100, after: $after) {
+      nodes {
+        id
+        createdAt
+        actor {
+          displayName
+          name
+        }
+        fromState { name }
+        toState   { name }
+        fromAssignee { displayName name }
+        toAssignee   { displayName name }
+        fromPriority
+        toPriority
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+"""
+
+
+def _fetch_issues_for_history(graphql_filter):
+    all_issues = []
+    cursor = None
+    while True:
+        variables = {'filter': graphql_filter, 'first': 100, 'after': cursor}
+        data = linear_utils.graphql_request(_ISSUES_QUERY, variables=variables)
+        connection = data.get('issues', {})
+        nodes = connection.get('nodes', [])
+        all_issues.extend(nodes)
+        page_info = connection.get('pageInfo', {})
+        if not page_info.get('hasNextPage'):
+            break
+        cursor = page_info['endCursor']
+    if linear_utils.VERBOSE:
+        print(f"Found {len(all_issues)} issue(s)", file=sys.stderr)
+    return all_issues
+
+
+def fetch_history(issue_uuid):
+    all_events = []
+    cursor = None
+    while True:
+        variables = {'id': issue_uuid, 'after': cursor}
+        data = linear_utils.graphql_request(_HISTORY_QUERY, variables=variables)
+        history = (data.get('issue') or {}).get('history', {})
+        nodes = history.get('nodes', [])
+        all_events.extend(nodes)
+        page_info = history.get('pageInfo', {})
+        if not page_info.get('hasNextPage'):
+            break
+        cursor = page_info['endCursor']
+    if linear_utils.VERBOSE:
+        print(f"  {len(all_events)} history event(s) for {issue_uuid}", file=sys.stderr)
+    return all_events
