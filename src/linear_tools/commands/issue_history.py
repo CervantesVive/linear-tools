@@ -120,7 +120,7 @@ def _fetch_issues_for_history(graphql_filter):
     return all_issues
 
 
-def fetch_history(issue_uuid):
+def _fetch_history(issue_uuid):
     all_events = []
     cursor = None
     while True:
@@ -184,6 +184,9 @@ def issue_history(
 
     graphql_filter = filters[0] if len(filters) == 1 else {'and': filters}
 
+    if linear_utils.VERBOSE:
+        typer.echo(f"Compiled filter:\n{json.dumps(graphql_filter, indent=2)}", err=True)
+
     try:
         issues = _fetch_issues_for_history(graphql_filter)
     except Exception as e:
@@ -197,7 +200,7 @@ def issue_history(
     rows = []
     for issue in issues:
         try:
-            events = fetch_history(issue['id'])
+            events = _fetch_history(issue['id'])
         except Exception as e:
             typer.echo(f"API error fetching history for {issue['identifier']}: {e}", err=True)
             raise typer.Exit(1)

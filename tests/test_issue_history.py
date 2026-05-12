@@ -107,7 +107,7 @@ from unittest.mock import patch
 
 from linear_tools.commands.issue_history import (
     _fetch_issues_for_history,
-    fetch_history,
+    _fetch_history,
 )
 
 
@@ -160,7 +160,7 @@ class TestFetchHistory:
     def test_returns_events_from_single_page(self):
         event = {'id': 'e1', 'createdAt': '2026-01-01T00:00:00.000Z'}
         with patch('linear_tools.utils.graphql_request', return_value=_history_page([event])) as gql:
-            result = fetch_history('uuid-1')
+            result = _fetch_history('uuid-1')
         assert len(result) == 1
         assert result[0]['id'] == 'e1'
         gql.assert_called_once()
@@ -169,7 +169,7 @@ class TestFetchHistory:
         page1 = _history_page([{'id': 'e1'}], has_next=True, cursor='c1')
         page2 = _history_page([{'id': 'e2'}])
         with patch('linear_tools.utils.graphql_request', side_effect=[page1, page2]) as gql:
-            result = fetch_history('uuid-1')
+            result = _fetch_history('uuid-1')
         assert len(result) == 2
         assert gql.call_count == 2
         second_vars = gql.call_args_list[1][1]['variables']
@@ -177,7 +177,7 @@ class TestFetchHistory:
 
     def test_returns_empty_list_when_no_history(self):
         with patch('linear_tools.utils.graphql_request', return_value=_history_page([])):
-            result = fetch_history('uuid-1')
+            result = _fetch_history('uuid-1')
         assert result == []
 
 
@@ -219,7 +219,7 @@ class TestIssueHistoryCommand:
 
     def test_unknown_field_exits_1(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'badfield'])
         assert result.exit_code == 1
         assert 'badfield' in result.stderr or 'unknown' in result.stderr.lower()
@@ -231,7 +231,7 @@ class TestIssueHistoryCommand:
 
     def test_outputs_json_by_default(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1'])
         assert result.exit_code == 0
         data = json_mod.loads(result.stdout)
@@ -251,7 +251,7 @@ class TestIssueHistoryCommand:
             'fromPriority': None, 'toPriority': None,
         }
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[noop, _make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[noop, _make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1'])
         assert result.exit_code == 0
         data = json_mod.loads(result.stdout)
@@ -259,7 +259,7 @@ class TestIssueHistoryCommand:
 
     def test_csv_output_has_header_and_row(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--csv'])
         assert result.exit_code == 0
         lines = result.stdout.strip().splitlines()
@@ -268,7 +268,7 @@ class TestIssueHistoryCommand:
 
     def test_fields_flag_restricts_output(self):
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=[_make_issue()]), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--id', 'WEB-1', '--fields', 'identifier,fromState,toState'])
         assert result.exit_code == 0
         data = json_mod.loads(result.stdout)
@@ -277,7 +277,7 @@ class TestIssueHistoryCommand:
     def test_multiple_issues_aggregates_all_events(self):
         issues = [_make_issue('WEB-1', uid='u1'), _make_issue('WEB-2', uid='u2')]
         with patch('linear_tools.commands.issue_history._fetch_issues_for_history', return_value=issues), \
-             patch('linear_tools.commands.issue_history.fetch_history', return_value=[_make_event()]):
+             patch('linear_tools.commands.issue_history._fetch_history', return_value=[_make_event()]):
             result = runner.invoke(app, ['--query', 'team = WEB'])
         assert result.exit_code == 0
         data = json_mod.loads(result.stdout)
