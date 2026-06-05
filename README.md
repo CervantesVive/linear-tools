@@ -1,6 +1,6 @@
 # linear-tools
 
-CLI for working with Linear issues and projects from the terminal. Covers exports, cycle management, bulk commenting, cross-system linking, and statistics.
+CLI for working with Linear issues and projects from the terminal. Covers exports, cycle management, bulk commenting, cross-system linking, PR status checks, and statistics.
 
 ## Install
 
@@ -19,6 +19,8 @@ LINEAR_ORG_SLUG=your-org   # defaults to "bitgo" if not set
 
 Get an API key at: **Linear → Settings → Security & Access → Personal API keys**.
 
+`linear merged-issues` also requires the GitHub CLI (`gh`) to be installed and authenticated, because it checks live PR state from GitHub.
+
 ## Commands
 
 | Command | What it does |
@@ -31,6 +33,8 @@ Get an API key at: **Linear → Settings → Security & Access → Personal API 
 | `linear add-links` | Attach a URL to query-matched issues |
 | `linear to-jira` | Resolve Linear issue IDs to their linked JIRA keys |
 | `linear merged-issues` | Show GitHub PR status for query-matched issues |
+| `linear issue-history` | Export field-level issue history events |
+| `linear close-merged` | Move issues to Done after linked PRs have been merged long enough |
 | `linear sync-jira-metadata` | Copy JIRA priority/status/story points to Linear issues |
 
 ---
@@ -145,6 +149,13 @@ linear merged-issues 'team = WEB AND state != Done'
 ```
 
 The command lists each query-matched issue's GitHub PR attachments and shows each PR as `Merged`, `Draft`, `Closed`, or `Open`. `Merged` is highlighted in green.
+Each row includes the Linear issue identifier, current Linear issue URL, PR status, and GitHub PR URL/title.
+
+Use `--no-color` if you need plain output for copying or scripts:
+
+```bash
+linear merged-issues 'team = WEB AND state = done' --no-color
+```
 
 ### How do I find the JIRA key for a Linear issue?
 
