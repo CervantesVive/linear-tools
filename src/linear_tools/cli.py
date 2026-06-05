@@ -11,6 +11,7 @@ from linear_tools.commands.comment import comment
 from linear_tools.commands.add_links import add_links
 from linear_tools.commands.close_merged import close_merged
 from linear_tools.commands.issue_history import issue_history
+from linear_tools.commands.merged_issues import merged_issues
 
 app = typer.Typer(
     name="linear",
@@ -28,6 +29,7 @@ app.command(name="comment")(comment)
 app.command(name="add-links")(add_links)
 app.command(name="close-merged")(close_merged)
 app.command(name="issue-history")(issue_history)
+app.command(name="merged-issues")(merged_issues)
 
 if __name__ == "__main__":
     app()

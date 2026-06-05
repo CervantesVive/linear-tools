@@ -30,6 +30,7 @@ Get an API key at: **Linear → Settings → Security & Access → Personal API 
 | `linear comment` | Post a Markdown comment to query-matched issues |
 | `linear add-links` | Attach a URL to query-matched issues |
 | `linear to-jira` | Resolve Linear issue IDs to their linked JIRA keys |
+| `linear merged-issues` | Show GitHub PR status for query-matched issues |
 | `linear sync-jira-metadata` | Copy JIRA priority/status/story points to Linear issues |
 
 ---
@@ -49,6 +50,8 @@ identifier in [WEB-1086, WEB-1087]
 **Supported fields:** `team`, `state`, `assignee`, `label`, `priority`, `estimate`, `created`, `updated`, `project`, `cycle`, `title`, `identifier`, `number`
 
 **Supported operators:** `=`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `contains`
+
+**State note:** `state` values are matched case-insensitively, so `state = done` matches `Done`.
 
 **Priority note:** Linear's scale is inverted numerically (1 = Urgent, 4 = Low). The query language maps human intent correctly — `priority >= High` returns Urgent and High issues.
 
@@ -134,6 +137,14 @@ linear add-links \
   --url "https://github.com/my-org/my-repo/releases/tag/v2.1" \
   --title "v2.1 Release"
 ```
+
+### How do I check whether PRs linked to issues are merged?
+
+```bash
+linear merged-issues 'team = WEB AND state != Done'
+```
+
+The command lists each query-matched issue's GitHub PR attachments and shows each PR as `Merged`, `Draft`, `Closed`, or `Open`. `Merged` is highlighted in green.
 
 ### How do I find the JIRA key for a Linear issue?
 

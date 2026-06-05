@@ -11,6 +11,7 @@ from linear_tools.query_parser import (
     _get_parser,
     _resolve_priority,
     _priority_range_filter,
+    _case_insensitive_name_filter,
 )
 
 SUPPORTED_PROJECT_FIELDS = frozenset({
@@ -68,13 +69,9 @@ def build_project_condition(field, op, value):
 
     # --- state ---
     elif field == 'state':
-        if op == 'in' or is_list:
-            names = value if is_list else [value]
-            return {'status': {'name': {'in': names}}}
-        gql_op = SCALAR_OPERATOR_MAP.get(op)
-        if gql_op not in ('eq', 'neq'):
+        if op not in ('=', '!=', 'in') and not is_list:
             raise ValueError("'state' supports =, !=, and in operators.")
-        return {'status': {'name': {gql_op: value}}}
+        return _case_insensitive_name_filter('status', 'name', op, value)
 
     # --- lead ---
     elif field == 'lead':

@@ -153,6 +153,23 @@ def _priority_range_filter(op, num):
     return {'priority': {'in': matching}}
 
 
+def _case_insensitive_name_filter(parent_field, relation_field, op, value):
+    """Build a case-insensitive name filter for Linear relation fields."""
+    if op == 'in' or isinstance(value, list):
+        values = value if isinstance(value, list) else [value]
+        filters = [
+            {parent_field: {relation_field: {'eqIgnoreCase': item}}}
+            for item in values
+        ]
+        return filters[0] if len(filters) == 1 else {'or': filters}
+
+    if op == '=':
+        return {parent_field: {relation_field: {'eqIgnoreCase': value}}}
+    if op == '!=':
+        return {parent_field: {relation_field: {'neqIgnoreCase': value}}}
+    raise ValueError("'state' supports =, !=, and in operators.")
+
+
 # ---------------------------------------------------------------------------
 # Identifier helpers
 # ---------------------------------------------------------------------------
@@ -214,13 +231,9 @@ def build_condition(field, op, value):
 
     # --- state ---------------------------------------------------------
     elif field == 'state':
-        if op == 'in' or is_list:
-            names = value if is_list else [value]
-            return {'state': {'name': {'in': names}}}
-        gql_op = SCALAR_OPERATOR_MAP.get(op)
-        if gql_op not in ('eq', 'neq'):
+        if op not in ('=', '!=', 'in') and not is_list:
             raise ValueError("'state' supports =, !=, and in operators.")
-        return {'state': {'name': {gql_op: value}}}
+        return _case_insensitive_name_filter('state', 'name', op, value)
 
     # --- assignee ------------------------------------------------------
     elif field == 'assignee':

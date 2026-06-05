@@ -154,7 +154,23 @@ def test_identifier_and_state():
             {'team': {'key': {'eq': 'WEB'}}},
             {'number': {'eq': 1086}},
         ]},
-        {'state': {'name': {'eq': 'Done'}}},
+        {'state': {'name': {'eqIgnoreCase': 'Done'}}},
+    ]}
+
+def test_state_eq_is_case_insensitive():
+    result = parse_query('state = done')
+    assert result == {'state': {'name': {'eqIgnoreCase': 'done'}}}
+
+def test_state_neq_is_case_insensitive():
+    result = parse_query('state != done')
+    assert result == {'state': {'name': {'neqIgnoreCase': 'done'}}}
+
+def test_state_in_is_case_insensitive():
+    result = parse_query('state in [todo, "In Progress", DONE]')
+    assert result == {'or': [
+        {'state': {'name': {'eqIgnoreCase': 'todo'}}},
+        {'state': {'name': {'eqIgnoreCase': 'In Progress'}}},
+        {'state': {'name': {'eqIgnoreCase': 'DONE'}}},
     ]}
 
 def test_team_and_number():

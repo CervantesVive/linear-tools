@@ -41,17 +41,21 @@ class TestBuildProjectCondition:
     # --- state ---
     def test_state_eq(self):
         assert build_project_condition('state', '=', 'In Progress') == {
-            'status': {'name': {'eq': 'In Progress'}}
+            'status': {'name': {'eqIgnoreCase': 'In Progress'}}
         }
 
     def test_state_neq(self):
         assert build_project_condition('state', '!=', 'Completed') == {
-            'status': {'name': {'neq': 'Completed'}}
+            'status': {'name': {'neqIgnoreCase': 'Completed'}}
         }
 
     def test_state_in(self):
         assert build_project_condition('state', 'in', ['Blocked', 'In Progress']) == {
-            'status': {'name': {'in': ['Blocked', 'In Progress']}}}
+            'or': [
+                {'status': {'name': {'eqIgnoreCase': 'Blocked'}}},
+                {'status': {'name': {'eqIgnoreCase': 'In Progress'}}},
+            ]
+        }
 
     def test_state_unsupported_operator(self):
         with pytest.raises(ValueError, match="'state' supports"):
@@ -146,14 +150,19 @@ class TestParseProjectQuery:
 
     def test_state_in_list(self):
         result = parse_project_query('state in ["Blocked", "In Progress"]')
-        assert result == {'status': {'name': {'in': ['Blocked', 'In Progress']}}}
+        assert result == {
+            'or': [
+                {'status': {'name': {'eqIgnoreCase': 'Blocked'}}},
+                {'status': {'name': {'eqIgnoreCase': 'In Progress'}}},
+            ]
+        }
 
     def test_or_expression(self):
         result = parse_project_query('state = Completed OR state = Cancelled')
         assert result == {
             'or': [
-                {'status': {'name': {'eq': 'Completed'}}},
-                {'status': {'name': {'eq': 'Cancelled'}}},
+                {'status': {'name': {'eqIgnoreCase': 'Completed'}}},
+                {'status': {'name': {'eqIgnoreCase': 'Cancelled'}}},
             ]
         }
 
