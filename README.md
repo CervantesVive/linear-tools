@@ -5,7 +5,7 @@ CLI for working with Linear issues and projects from the terminal. Covers export
 ## Install
 
 ```bash
-uv tool install ./packages/linear
+uv tool install .
 ```
 
 ## Prerequisites

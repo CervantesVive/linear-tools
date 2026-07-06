@@ -13,7 +13,10 @@ import pytest
 
 os.environ.setdefault('LINEAR_API_KEY', 'test')
 
-from linear_tools.commands.to_jira import find_jira_link, read_export_ids, read_csv_ids, lookup_jira_ids
+from typer import Typer
+from typer.testing import CliRunner
+
+from linear_tools.commands.to_jira import find_jira_link, read_export_ids, read_csv_ids, lookup_jira_ids, to_jira
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +259,22 @@ class TestLookupJiraIds:
         monkeypatch.setattr(utils, "graphql_request", mock_graphql)
         lookup_jira_ids(["WEB-1", "ENG-2"])
         assert set(seen_team_keys) == {"WEB", "ENG"}
+
+
+# ---------------------------------------------------------------------------
+# TestToJiraCommand
+# ---------------------------------------------------------------------------
+
+class TestToJiraCommand:
+    """Tests for the to_jira CLI command's argument handling."""
+
+    def test_no_args_shows_help(self):
+        runner = CliRunner()
+        app = Typer()
+        app.command()(to_jira)
+        result = runner.invoke(app, [])
+        assert result.exit_code == 0
+        assert "Usage:" in result.stdout
 
 
 if __name__ == "__main__":

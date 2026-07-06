@@ -7,7 +7,7 @@ Parses expressions like:
   team = WEB AND state = "In Progress"
   priority >= High AND (label in [Bug, P0] OR state = Done)
   team = WEB AND created > 2025-01-01 AND updated < 2025-04-01
-  title contains "auth" AND assignee = "Dean Hamilton"
+  title contains "auth" AND assignee = "Jamie Rivera"
   identifier = WEB-1086
   identifier in [WEB-1086, WEB-1087]
 

@@ -555,10 +555,10 @@ class TestBuildUpdateInputAssignee:
     ENABLED = {"assignee"}
 
     def test_assignee_resolved_to_user_id(self, monkeypatch):
-        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-dean")
-        row = {"Issue key": "CE-100", "Assignee": "Dean Hamilton"}
+        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-jamie")
+        row = {"Issue key": "CE-100", "Assignee": "Jamie Rivera"}
         input_dict, skipped = build_update_input(row, self.BASE_COLUMNS, "WEB", self.ENABLED)
-        assert input_dict["assigneeId"] == "uuid-dean"
+        assert input_dict["assigneeId"] == "uuid-jamie"
         assert not any(f == "assignee" for f, _ in skipped)
 
     def test_unknown_assignee_skipped(self, monkeypatch):
@@ -569,20 +569,20 @@ class TestBuildUpdateInputAssignee:
         assert any(f == "assignee" for f, _ in skipped)
 
     def test_empty_assignee_skipped(self, monkeypatch):
-        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-dean")
+        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-jamie")
         row = {"Issue key": "CE-100", "Assignee": ""}
         input_dict, skipped = build_update_input(row, self.BASE_COLUMNS, "WEB", self.ENABLED)
         assert "assigneeId" not in input_dict
         assert any(f == "assignee" for f, _ in skipped)
 
     def test_assignee_excluded_when_not_enabled(self, monkeypatch):
-        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-dean")
-        row = {"Issue key": "CE-100", "Assignee": "Dean Hamilton"}
+        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-jamie")
+        row = {"Issue key": "CE-100", "Assignee": "Jamie Rivera"}
         input_dict, _ = build_update_input(row, self.BASE_COLUMNS, "WEB", set())
         assert "assigneeId" not in input_dict
 
     def test_assignee_skipped_when_column_missing(self, monkeypatch):
-        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-dean")
+        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-jamie")
         columns = dict(self.BASE_COLUMNS, assignee=None)
         row = {"Issue key": "CE-100"}
         input_dict, skipped = build_update_input(row, columns, "WEB", self.ENABLED)
@@ -667,7 +667,7 @@ class TestBuildUpdateInputCombinedAllFields:
 
     def test_all_five_fields_populated(self, monkeypatch):
         monkeypatch.setattr(sync_jira_metadata, "get_state_id", lambda t, n: "uuid-in-progress")
-        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-dean")
+        monkeypatch.setattr(sync_jira_metadata, "get_user_id", lambda name: "uuid-jamie")
         monkeypatch.setattr(sync_jira_metadata, "get_label_id", lambda name: f"uuid-{name.lower()}")
 
         columns = {
@@ -683,7 +683,7 @@ class TestBuildUpdateInputCombinedAllFields:
             "Priority": "High",
             "Status": "In Progress",
             "Custom field (Story Points)": "5.0",
-            "Assignee": "Dean Hamilton",
+            "Assignee": "Jamie Rivera",
             "Labels": "Bug, Feature",
         }
         all_fields = {"priority", "estimate", "status", "assignee", "labels"}
@@ -692,7 +692,7 @@ class TestBuildUpdateInputCombinedAllFields:
             "priority": 2,
             "estimate": 5.0,
             "stateId": "uuid-in-progress",
-            "assigneeId": "uuid-dean",
+            "assigneeId": "uuid-jamie",
             "labelIds": ["uuid-bug", "uuid-feature"],
         }
         assert skipped == []

@@ -195,13 +195,13 @@ def _print_table(results):
 
 
 def to_jira(
+    ctx: typer.Context,
     linear_ids: Annotated[Optional[List[str]], typer.Argument(help="Linear issue IDs (e.g. WEB-123)")] = None,
     file: Annotated[Optional[str], typer.Option("-f", "--file", help="File containing Linear IDs, one per line")] = None,
     from_json: Annotated[Optional[str], typer.Option("--from-json", help="linear export-issues --json output file")] = None,
     from_csv: Annotated[Optional[str], typer.Option("--from-csv", help="Linear CSV export file (ID column)")] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON array")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output")] = False,
-    ctx: typer.Context = typer.Context,
 ):
     """Map Linear issue IDs to their corresponding JIRA issue keys."""
     if verbose:

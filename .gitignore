@@ -8,4 +8,6 @@ build/
 # uv / virtualenvs
 .venv/
 .python-version
-uv.lock
+
+# secrets
+.env

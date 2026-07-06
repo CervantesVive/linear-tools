@@ -83,7 +83,7 @@ def get_user_id(display_name):
     Caches all org users on first call to avoid repeated API queries.
 
     Args:
-        display_name: e.g. "Dean Hamilton"
+        display_name: e.g. "Jamie Rivera"
 
     Returns:
         str: user UUID, or None if no matching user found
@@ -382,11 +382,9 @@ def sync_metadata(rows, columns, jira_mapping, team_key, enabled_fields, dry_run
             linear_ids.append(linear_id)
 
     # Batch-resolve Linear identifiers to internal UUIDs
+    # (done even in dry_run, to surface any resolution failures in the preview)
     uuid_map = {}
-    if linear_ids and not dry_run:
-        uuid_map = linear_utils.resolve_issue_ids(linear_ids)
-    elif linear_ids and dry_run:
-        # In dry run we still resolve to surface any resolution failures
+    if linear_ids:
         uuid_map = linear_utils.resolve_issue_ids(linear_ids)
 
     results = []

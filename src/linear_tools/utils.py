@@ -409,7 +409,7 @@ def get_org_users():
 
     Returns:
         dict: {display_name_lower: user_uuid} for active users only,
-              e.g. {"dean hamilton": "uuid-..."}
+              e.g. {"jamie rivera": "uuid-..."}
               Falls back to 'name' if 'displayName' is empty.
     """
     query = """
