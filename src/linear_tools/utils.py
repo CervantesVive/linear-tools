@@ -510,11 +510,11 @@ mutation CreateComment($issueId: String!, $body: String!) {
 def post_comment_to_linear_issue(identifier, body):
     """Post a markdown comment to a Linear issue by its identifier.
 
-    Resolves the identifier (e.g. "CSI-1907") to an internal UUID, then
+    Resolves the identifier (e.g. "WEB-1907") to an internal UUID, then
     posts the comment via the commentCreate GraphQL mutation.
 
     Args:
-        identifier: Human-readable Linear issue identifier (e.g. "CSI-1907").
+        identifier: Human-readable Linear issue identifier (e.g. "WEB-1907").
         body: Markdown-formatted comment body.
 
     Returns:

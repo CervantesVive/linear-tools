@@ -182,23 +182,23 @@ class TestExtractSlugId:
 
     def test_full_url_with_query_params(self):
         url = (
-            'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e'
+            'https://linear.app/sinchi/project/sprint-planning-doc-a1b2c3d4e5f6'
             '/issues?layout=list&ordering=priority'
         )
-        assert extract_slug_id(url) == '2d728a27e93e'
+        assert extract_slug_id(url) == 'a1b2c3d4e5f6'
 
     def test_full_url_no_trailing_path(self):
-        url = 'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e'
-        assert extract_slug_id(url) == '2d728a27e93e'
+        url = 'https://linear.app/sinchi/project/sprint-planning-doc-a1b2c3d4e5f6'
+        assert extract_slug_id(url) == 'a1b2c3d4e5f6'
 
     def test_full_slug(self):
-        assert extract_slug_id('navbar-revamp-offsite-2d728a27e93e') == '2d728a27e93e'
+        assert extract_slug_id('sprint-planning-doc-a1b2c3d4e5f6') == 'a1b2c3d4e5f6'
 
     def test_short_id_only(self):
-        assert extract_slug_id('2d728a27e93e') == '2d728a27e93e'
+        assert extract_slug_id('a1b2c3d4e5f6') == 'a1b2c3d4e5f6'
 
     def test_strips_whitespace(self):
-        assert extract_slug_id('  2d728a27e93e  ') == '2d728a27e93e'
+        assert extract_slug_id('  a1b2c3d4e5f6  ') == 'a1b2c3d4e5f6'
 
     def test_empty_raises(self):
         with pytest.raises(ValueError, match="cannot be empty"):
@@ -226,7 +226,7 @@ class TestGetFilterStatistics:
     @patch('linear_tools.commands.get_statistics.fetch_issues')
     def test_passes_filter_to_fetch(self, mock_fetch):
         mock_fetch.return_value = []
-        gql_filter = {'project': {'slugId': {'eq': '2d728a27e93e'}}}
+        gql_filter = {'project': {'slugId': {'eq': 'a1b2c3d4e5f6'}}}
         get_filter_statistics(gql_filter)
         mock_fetch.assert_called_once_with(gql_filter)
 
@@ -234,7 +234,7 @@ class TestGetFilterStatistics:
     def test_combined_and_filter(self, mock_fetch):
         mock_fetch.return_value = [self._node('completed', 5)]
         combined = {'and': [
-            {'project': {'slugId': {'eq': '2d728a27e93e'}}},
+            {'project': {'slugId': {'eq': 'a1b2c3d4e5f6'}}},
             {'team': {'key': {'eq': 'WEB'}}},
         ]}
         stats = get_filter_statistics(combined)
@@ -275,13 +275,13 @@ class TestGetStatisticsCli:
     @patch('linear_tools.commands.get_statistics.fetch_issues')
     def test_project_only(self, mock_fetch):
         mock_fetch.return_value = []
-        result = self.runner.invoke(self.app, ['get-statistics', '--project', '2d728a27e93e'])
+        result = self.runner.invoke(self.app, ['get-statistics', '--project', 'a1b2c3d4e5f6'])
         assert result.exit_code == 0
         import json
         output = json.loads(result.output)
-        assert output['project'] == '2d728a27e93e'
+        assert output['project'] == 'a1b2c3d4e5f6'
         assert 'query' not in output
-        mock_fetch.assert_called_once_with({'project': {'slugId': {'eq': '2d728a27e93e'}}})
+        mock_fetch.assert_called_once_with({'project': {'slugId': {'eq': 'a1b2c3d4e5f6'}}})
 
     @patch('linear_tools.commands.get_statistics.fetch_issues')
     @patch('linear_tools.commands.get_statistics.parse_query')
@@ -290,12 +290,12 @@ class TestGetStatisticsCli:
         mock_fetch.return_value = []
         result = self.runner.invoke(
             self.app,
-            ['get-statistics', '--project', '2d728a27e93e', 'state != Completed'],
+            ['get-statistics', '--project', 'a1b2c3d4e5f6', 'state != Completed'],
         )
         assert result.exit_code == 0
         called_filter = mock_fetch.call_args[0][0]
         assert called_filter == {'and': [
-            {'project': {'slugId': {'eq': '2d728a27e93e'}}},
+            {'project': {'slugId': {'eq': 'a1b2c3d4e5f6'}}},
             {'state': {'name': {'neq': 'Completed'}}},
         ]}
 

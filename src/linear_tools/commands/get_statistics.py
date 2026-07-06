@@ -15,9 +15,9 @@ def extract_slug_id(project_input):
     """Extract the short hex slug ID from a project URL, full slug, or bare ID.
 
     Accepts:
-      - Full URL:   'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e/issues?...'
-      - Full slug:  'navbar-revamp-offsite-2d728a27e93e'
-      - Short ID:   '2d728a27e93e'
+      - Full URL:   'https://linear.app/sinchi/project/sprint-planning-doc-a1b2c3d4e5f6/issues?...'
+      - Full slug:  'sprint-planning-doc-a1b2c3d4e5f6'
+      - Short ID:   'a1b2c3d4e5f6'
 
     Returns:
         str: The last hyphen-delimited token of the slug (the short hex ID).
