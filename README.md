@@ -14,7 +14,7 @@ Create a `.env` file (or export environment variables) with:
 
 ```
 LINEAR_API_KEY=<your-api-key>
-LINEAR_ORG_SLUG=your-org   # defaults to "bitgo" if not set
+LINEAR_ORG_SLUG=your-org   # required, e.g. "sinchi"
 ```
 
 Get an API key at: **Linear → Settings → Security & Access → Personal API keys**.

@@ -16,13 +16,13 @@ Provided functions
 Environment and Dependencies
 - Environment variables required (loaded via .env):
   - LINEAR_API_KEY: Personal API key from Linear Settings > Security & Access > API
-  - LINEAR_ORG_SLUG: Org slug for constructing issue URLs (default: bitgo)
+  - LINEAR_ORG_SLUG: Org slug for constructing issue URLs (required, e.g. "sinchi")
 - External deps: requests, python-dotenv
 
 Usage notes
 - Set linear_utils.VERBOSE = True in calling scripts to enable debug output to stderr.
 - The API key is masked in verbose output to prevent credential exposure.
-- Environment variables are validated at module load time — missing LINEAR_API_KEY raises EnvironmentError.
+- Environment variables are validated lazily — missing LINEAR_API_KEY or LINEAR_ORG_SLUG raises EnvironmentError.
 """
 import sys
 import os
@@ -34,7 +34,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LINEAR_API_KEY = os.getenv('LINEAR_API_KEY')
-LINEAR_ORG_SLUG = os.getenv('LINEAR_ORG_SLUG', 'bitgo')
+LINEAR_ORG_SLUG = os.getenv('LINEAR_ORG_SLUG')
 LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql'
 
 # Retry configuration (mirrors jira_utils constants)
@@ -60,6 +60,12 @@ def _require_env():
             "Please ensure the following is set:\n"
             "  - LINEAR_API_KEY: Your Linear personal API key\n\n"
             "To create one: Linear Settings > Security & Access > Personal API Keys\n"
+            "You can set this in a .env file in the project root or export it as an environment variable."
+        )
+    if not LINEAR_ORG_SLUG:
+        raise EnvironmentError(
+            "Missing required environment variable: LINEAR_ORG_SLUG\n\n"
+            "Set this to your Linear workspace's URL slug, e.g. LINEAR_ORG_SLUG=sinchi\n"
             "You can set this in a .env file in the project root or export it as an environment variable."
         )
 

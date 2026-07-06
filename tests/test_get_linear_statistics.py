@@ -182,13 +182,13 @@ class TestExtractSlugId:
 
     def test_full_url_with_query_params(self):
         url = (
-            'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e'
+            'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e'
             '/issues?layout=list&ordering=priority'
         )
         assert extract_slug_id(url) == '2d728a27e93e'
 
     def test_full_url_no_trailing_path(self):
-        url = 'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e'
+        url = 'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e'
         assert extract_slug_id(url) == '2d728a27e93e'
 
     def test_full_slug(self):
@@ -210,11 +210,11 @@ class TestExtractSlugId:
 
     def test_url_with_no_slug_raises(self):
         with pytest.raises(ValueError):
-            extract_slug_id('https://linear.app/bitgo/project/')
+            extract_slug_id('https://linear.app/sinchi/project/')
 
     def test_url_with_only_query_params_raises(self):
         with pytest.raises(ValueError):
-            extract_slug_id('https://linear.app/bitgo/project/?param=value')
+            extract_slug_id('https://linear.app/sinchi/project/?param=value')
 
 
 class TestGetFilterStatistics:

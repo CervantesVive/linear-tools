@@ -15,7 +15,7 @@ def extract_slug_id(project_input):
     """Extract the short hex slug ID from a project URL, full slug, or bare ID.
 
     Accepts:
-      - Full URL:   'https://linear.app/bitgo/project/navbar-revamp-offsite-2d728a27e93e/issues?...'
+      - Full URL:   'https://linear.app/sinchi/project/navbar-revamp-offsite-2d728a27e93e/issues?...'
       - Full slug:  'navbar-revamp-offsite-2d728a27e93e'
       - Short ID:   '2d728a27e93e'
 

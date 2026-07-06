@@ -1,4 +1,4 @@
-"""Logging utilities for BitGo scripts"""
+"""Shared logging utilities"""
 import sys
 
 # Global verbose flag

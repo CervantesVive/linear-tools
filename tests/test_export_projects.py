@@ -184,7 +184,7 @@ class TestNormalizeProject:
         base = {
             'name': 'Auth Revamp',
             'description': 'Revamp authentication',
-            'url': 'https://linear.app/bitgo/project/auth-revamp',
+            'url': 'https://linear.app/sinchi/project/auth-revamp',
             'priority': 2,
             'startDate': '2026-01-01',
             'targetDate': '2026-06-30',
@@ -202,7 +202,7 @@ class TestNormalizeProject:
     def test_full_node(self):
         result = normalize_project(self._node())
         assert result['name'] == 'Auth Revamp'
-        assert result['url'] == 'https://linear.app/bitgo/project/auth-revamp'
+        assert result['url'] == 'https://linear.app/sinchi/project/auth-revamp'
         assert result['state'] == 'In Progress'
         assert result['stateType'] == 'started'
         assert result['priority'] == 2

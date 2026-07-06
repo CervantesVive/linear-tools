@@ -711,7 +711,7 @@ class TestJiraStatusMapping:
     ]
 
     def test_all_csv_statuses_are_mapped(self):
-        """Every status from the real BitGo Cycle1 export maps to a Linear state."""
+        """Every status from a real Cycle1 JIRA export maps to a Linear state."""
         for status in self.KNOWN_STATUSES_FROM_CSV:
             normalized = status.upper()
             assert normalized in JIRA_STATUS_TO_LINEAR, (

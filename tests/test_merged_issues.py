@@ -72,7 +72,7 @@ class TestBuildRows:
 
         assert len(rows) == 2
         assert rows[0]["identifier"] == "WEB-1"
-        assert rows[0]["issueUrl"] == "https://linear.app/bitgo/issue/WEB-1"
+        assert rows[0]["issueUrl"] == "https://linear.app/sinchi/issue/WEB-1"
         assert rows[0]["status"] == "Merged"
         assert rows[1]["status"] == "Open"
 
@@ -81,7 +81,7 @@ class TestBuildRows:
         assert rows == [{
             "identifier": "WEB-1",
             "issueTitle": "Issue title",
-            "issueUrl": "https://linear.app/bitgo/issue/WEB-1",
+            "issueUrl": "https://linear.app/sinchi/issue/WEB-1",
             "prTitle": None,
             "prUrl": None,
             "status": "No PR",
@@ -118,7 +118,7 @@ class TestMergedIssuesCommand:
 
         assert result.exit_code == 0
         assert "WEB-1" in result.stdout
-        assert "https://linear.app/bitgo/issue/WEB-1" in result.stdout
+        assert "https://linear.app/sinchi/issue/WEB-1" in result.stdout
         assert "Merged" in result.stdout
         assert "Fix bug" in result.stdout
         assert "Checked 1 issue(s), 1 PR(s)." in result.stderr
