@@ -13,7 +13,7 @@ dependencies = [
 linear = "linear_tools.cli:app"
 
 [dependency-groups]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=9.1.1"]
 
 [build-system]
 requires = ["hatchling"]
