@@ -7,18 +7,17 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "typer>=0.12.0",
     "lark>=1.0.0",
-    "tools-shared",
 ]
 
 [project.scripts]
 linear = "linear_tools.cli:app"
 
-[tool.uv.sources]
-tools-shared = { workspace = true }
+[dependency-groups]
+dev = ["pytest>=8.0.0"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/linear_tools"]
+packages = ["src/linear_tools", "src/tools_shared"]
